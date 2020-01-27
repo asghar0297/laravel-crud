@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Company;
 use App\Customer;
+use Session;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
@@ -13,9 +14,14 @@ class CustomerController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+
+    public function __construct(){
+
+        $this->middleware('auth')->except(['index']);
+    }
     public function index()
     {
-        $customers = Customer::get();
+        $customers = Customer::paginate(6);
         $companies = Company::all();
         $counter = 1;
         return view('customer.index',compact('customers','companies','counter'));
@@ -28,7 +34,7 @@ class CustomerController extends Controller
      */
     public function create()
     {
-        $companies = Company::all();
+        $companies = Company::pluck('name','id');
         return view('customer.create',compact('companies'));
     }
 
@@ -40,14 +46,10 @@ class CustomerController extends Controller
      */
     public function store(Request $request)
     {
-        $data = request()->validate([
-            'name' => 'required|min:3',
-            'email' => 'required|email',
-            'company_id' => 'required',
-            'status' => 'required'
-        ]);
         
-        Customer::create($data);
+        Customer::create($this->validateRequest());
+        Session::flash('message','Data Submit Successfully');
+        Session::flash('alert-class','alert-success');  
         return redirect('customer');
     }
 
@@ -70,7 +72,8 @@ class CustomerController extends Controller
      */
     public function edit(Customer $customer)
     {
-        //
+        $companies = Company::pluck('name','id');
+        return view('customer.edit',compact('companies','customer'));
     }
 
     /**
@@ -82,7 +85,10 @@ class CustomerController extends Controller
      */
     public function update(Request $request, Customer $customer)
     {
-        //
+        $customer->update($this->validateRequest());
+        Session::flash('message','Data Update Successfully');
+        Session::flash('alert-class','alert-success');
+        return redirect('customer/'.$customer->id);
     }
 
     /**
@@ -93,6 +99,20 @@ class CustomerController extends Controller
      */
     public function destroy(Customer $customer)
     {
-        //
+        $customer->delete();
+        Session::flash('message','Data Deleted Successfully');
+        Session::flash('alert-class','alert-danger');
+        return redirect('customer');
+    }
+
+    public function validateRequest(){
+
+        return request()->validate([
+            'name' => 'required|min:3',
+            'email' => 'required|email',
+            'company_id' => 'required',
+            'status' => 'required'
+        ]);
+        
     }
 }
